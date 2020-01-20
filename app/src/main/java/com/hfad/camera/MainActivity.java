@@ -1,75 +1,43 @@
 package com.hfad.camera;
-
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Random;
-import android.media.ExifInterface;
-import android.net.Uri;
+
+import android.content.ContextWrapper;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.MediaStore.Images;
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
-import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.hfad.camera.R;
-
-
 public class MainActivity extends Activity {
-
     private static final int CAMERA_PIC_REQUEST = 22;
-
-    Uri cameraUri;
-
+    //Uri cameraUri;
     Button BtnSelectImage;
-    private TextView textView;
     private ImageView ImgPhoto;
-    private String Camerapath ;
-    private TextView textView2;
-    private TextView textView3;
-    private TextView textView4;
-
-
-
+    private TextView outputPathView;
+    private TextView storageWritableView;
+    private TextView fileExistsView;
+    private TextView errorView;
+    //private String Camerapath ;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        textView = (TextView) findViewById(R.id.textView);
-
-        ImgPhoto = (ImageView) findViewById(R.id.ImgPhoto);
-
-        BtnSelectImage = (Button) findViewById(R.id.BtnSelectImg);
-
-        textView2 = (TextView) findViewById(R.id.textView2);
-
-        textView3 = (TextView) findViewById(R.id.textView3);
-
-        textView4 = (TextView) findViewById(R.id.textView4);
-
+        errorView = findViewById( R.id.error_view );
+        outputPathView = findViewById(R.id.outputPathView);
+        ImgPhoto = findViewById(R.id.ImgPhoto);
+        BtnSelectImage = findViewById(R.id.BtnSelectImg);
+        storageWritableView = findViewById(R.id.storageWritableView );
+        storageWritableView.setText( "IsStorageWritable: " + (isExternalStorageWritable() ) );
+        fileExistsView = findViewById(R.id.fileExistsView );
         File outputFile = new File(getOutputFilePath(getRootPath()));
-        if (outputFile.exists ()){
-            textView4.setText(""+true);
-        } else {
-            textView4.setText(""+false);
-        }
-
+        fileExistsView.setText( "FileExists: " + ( outputFile.exists() ? true : false ) );
         BtnSelectImage.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -81,10 +49,7 @@ public class MainActivity extends Activity {
                 }
             }
         });
-
     }
-
-
     @Override
     public void onActivityResult(final int requestCode, int resultCode, Intent data) {
         try {
@@ -93,10 +58,11 @@ public class MainActivity extends Activity {
                     if (resultCode == RESULT_OK) {
                         try {
                             Bitmap photo = (Bitmap) data.getExtras().get("data");
-
                             ImgPhoto.setImageBitmap(photo);
                             SaveImage(photo);
+                            //SaveImageInternal(photo);
                         } catch (Exception e) {
+                            errorView.setText( e.getMessage() );
                             Toast.makeText(this, "Couldn't load photo", Toast.LENGTH_LONG).show();
                         }
                     }
@@ -108,30 +74,40 @@ public class MainActivity extends Activity {
         }
     }
     private void SaveImage(Bitmap finalBitmap) {
-
-
-        File myDir = new File(getRootPath());
-        if (!myDir.exists()) {
-            myDir.mkdirs();
-        }
-        String fname = getOutputFilePath(myDir.getAbsolutePath());
-
-        File file = new File (fname);
-
-        textView.setText(myDir.getAbsolutePath());
-        String outputStorageWritable = ""+isExternalStorageWritable();
-        textView2.setText(outputStorageWritable);
-        if (file.exists ())
-            file.delete();
-
+        ContextWrapper cw = new ContextWrapper(getApplicationContext());
+        File externalFilesDir = cw.getExternalFilesDir( "saved_images" );
+        //File myDir = new File(getRootPath());
+        //if (!myDir.exists()) myDir.mkdirs();
+        if (!externalFilesDir.exists()) externalFilesDir.mkdirs();
+        //outputPathView.setText( "OutputPath: " + myDir.getAbsolutePath() + "\nExists: " + myDir.exists() );
+        outputPathView.setText( "OutputPath: " + externalFilesDir.getAbsolutePath() + "\nExists: " + externalFilesDir.exists() );
+        //outputPathView.setText("outputPath: " + myDir.getAbsolutePath());
+        //myDir.setWritable( true, false );
+        File file = new File (externalFilesDir, "AnImage.jpg");
+        /*
+        String fileName = getOutputFilePath(myDir.getAbsolutePath());
+        File file = new File (fileName);
+        boolean keepGoing = true;
+       if (file.exists ()) file.delete();
+       try {
+           file.createNewFile();
+           file = new File(fileName);
+       }
+       catch (Exception e){
+           errorView.setText("Error Creating file: " + e.getMessage());
+           keepGoing = false;
+       }
+         */
+//       if( !keepGoing ) return;
         try {
+            errorView.setText( "FileExists: " + file.exists() +  "\nCan read file: " + file.canRead() + "\nCan write to file: " + file.canWrite() );
             FileOutputStream out = new FileOutputStream(file);
             finalBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
             out.flush();
             out.close();
-
         } catch (Exception e) {
             e.printStackTrace();
+            errorView.setText( "Error"  + e.getMessage() );
         }
     }
     public boolean isExternalStorageWritable() {
@@ -141,24 +117,20 @@ public class MainActivity extends Activity {
         }
         return false;
     }
-
     public String getRootPath(){
-        String root = "/sdcard/saved_images";
-        return root;
+        //String root = "/sdcard/saved_images";
+        //File rootDirectory = new File( Environment.getExternalStorageDirectory(), "/saved_images");
+        File rootDirectory = new File( Environment.getRootDirectory(), "/scout_saved_images");
+        rootDirectory.mkdirs();
+        return rootDirectory.getPath();
     }
     public String getOutputFilePath(String rootPath){
-        String fname = "Image_test.jpg";
+        Random generator = new Random();
+        int n = 10000;
+        n = generator.nextInt(n);
+        String fname = "Image-"+ n +".jpg";
         File file = new File (rootPath, fname);
         String outputPath = file.getAbsolutePath();
         return outputPath;
     }
-
-
-
-
-    public String doesNotExist() {
-        String doesNotExist = "Does not exist";
-        return doesNotExist();
-    }
-
 }
