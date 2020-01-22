@@ -2,8 +2,8 @@ package com.hfad.camera;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.Random;
-
 import android.content.ContextWrapper;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.app.Activity;
@@ -15,6 +15,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 public class MainActivity extends Activity {
     private static final int CAMERA_PIC_REQUEST = 22;
     //Uri cameraUri;
@@ -24,6 +25,7 @@ public class MainActivity extends Activity {
     private TextView storageWritableView;
     private TextView fileExistsView;
     private TextView errorView;
+    private TextView listOfFilesInSavedImages;
     //private String Camerapath ;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +36,8 @@ public class MainActivity extends Activity {
         ImgPhoto = findViewById(R.id.ImgPhoto);
         BtnSelectImage = findViewById(R.id.BtnSelectImg);
         storageWritableView = findViewById(R.id.storageWritableView );
+        listOfFilesInSavedImages = findViewById(R.id.listOfFilesInSavedImages);
+        listOfFilesInSavedImages.setText(getFilesInSavedImages());
         storageWritableView.setText( "IsStorageWritable: " + (isExternalStorageWritable() ) );
         fileExistsView = findViewById(R.id.fileExistsView );
         File outputFile = new File(getOutputFilePath(getRootPath()));
@@ -83,7 +87,7 @@ public class MainActivity extends Activity {
         outputPathView.setText( "OutputPath: " + externalFilesDir.getAbsolutePath() + "\nExists: " + externalFilesDir.exists() );
         //outputPathView.setText("outputPath: " + myDir.getAbsolutePath());
         //myDir.setWritable( true, false );
-        File file = new File (externalFilesDir, "AnImage.jpg");
+//        File file = new File (externalFilesDir, "AnImage.jpg");
         /*
         String fileName = getOutputFilePath(myDir.getAbsolutePath());
         File file = new File (fileName);
@@ -99,16 +103,16 @@ public class MainActivity extends Activity {
        }
          */
 //       if( !keepGoing ) return;
-        try {
-            errorView.setText( "FileExists: " + file.exists() +  "\nCan read file: " + file.canRead() + "\nCan write to file: " + file.canWrite() );
-            FileOutputStream out = new FileOutputStream(file);
-            finalBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
-            out.flush();
-            out.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-            errorView.setText( "Error"  + e.getMessage() );
-        }
+//        try {
+//            errorView.setText( "FileExists: " + file.exists() +  "\nCan read file: " + file.canRead() + "\nCan write to file: " + file.canWrite() );
+//            FileOutputStream out = new FileOutputStream(file);
+//            finalBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
+//            out.flush();
+//            out.close();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            errorView.setText( "Error"  + e.getMessage() );
+//        }
     }
     public boolean isExternalStorageWritable() {
         String state = Environment.getExternalStorageState();
@@ -132,5 +136,16 @@ public class MainActivity extends Activity {
         File file = new File (rootPath, fname);
         String outputPath = file.getAbsolutePath();
         return outputPath;
+    }
+    public String getFilesInSavedImages(){
+        ContextWrapper cw = new ContextWrapper(getApplicationContext());
+        File externalFilesDir = cw.getExternalFilesDir( "saved_images" );
+        File[] files = externalFilesDir.listFiles();
+        StringBuilder fileListBuilder = new StringBuilder();
+        for( File file : files ){
+            fileListBuilder.append( file.getName() + "\n" );
+        }
+        String textToDisplay = fileListBuilder.toString();
+        return textToDisplay;
     }
 }
